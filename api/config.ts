@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 dotenv.config();
 
 export const config = {
+  JWT_SECRET: process.env.JWT_SECRET || "your-secret-key-change-in-production",
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || "24h",
   ACCESS_TOKEN_SECRET: process.env.ACCESS_TOKEN_SECRET,
   BDD: {
     host: process.env.DB_HOST,
