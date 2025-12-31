@@ -10,7 +10,7 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: mathieuack/tp06_ackermann_mathieu
+  IMAGE_NAME: mathieuack/tp07_ackermann_mathieu
 
 jobs:
   build-and-publish:
@@ -60,6 +60,8 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           build-args: |
             PORT=${{ secrets.PORT }}
+            JWT_SECRET=${{ secrets.JWT_SECRET }}
+            JWT_EXPIRES_IN=${{ secrets.JWT_EXPIRES_IN }}
             ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
             DB_HOST=${{ secrets.DB_HOST }}
             DB_PORT=${{ secrets.DB_PORT }}

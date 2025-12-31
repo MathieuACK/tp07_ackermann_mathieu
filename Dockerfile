@@ -28,6 +28,8 @@ ARG DB_PORT
 ARG DB_USER
 ARG DB_PASSWORD
 ARG DB_NAME
+ARG JWT_EXPIRES_IN
+ARG JWT_SECRET
 
 # Set as environment variables (accessible at runtime)
 ENV PORT=${PORT}
@@ -37,6 +39,8 @@ ENV DB_PORT=${DB_PORT}
 ENV DB_USER=${DB_USER}
 ENV DB_PASSWORD=${DB_PASSWORD}
 ENV DB_NAME=${DB_NAME}
+ENV JWT_EXPIRES_IN=${JWT_EXPIRES_IN}
+ENV JWT_SECRET=${JWT_SECRET}
 
 # Copy only production dependencies and the built artifacts
 COPY ./api/package*.json ./
