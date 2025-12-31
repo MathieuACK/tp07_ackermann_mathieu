@@ -1,19 +1,22 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, map, catchError, of } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, map, catchError, of, tap } from 'rxjs';
 import { Store } from '@ngxs/store';
-import { UsersService } from '../users/users.service';
 import { User } from '../../models/users';
 import { SetCurrentUser } from '../../shared/actions/favorites.actions';
+import { AuthResponse } from '../../shared/models/auth';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
+  private apiUrl = environment.apiUrl || 'http://localhost:3000';
   private currentUser$ = new BehaviorSubject<User | null>(
     JSON.parse(localStorage.getItem('currentUser') || 'null')
   );
 
-  constructor(private usersService: UsersService, private store: Store) {
+  constructor(private http: HttpClient, private store: Store) {
     // Initialize store with current user if logged in
     const currentUser = this.currentUser$.value;
     if (currentUser) {
@@ -21,44 +24,60 @@ export class AuthService {
     }
   }
 
-  public login(login: string, password: string): Observable<boolean> {
-    return this.usersService.getUsers().pipe(
-      map((users) => {
-        const found = users.find(
-          (u) => u.login === login && u.password === password
-        );
-        if (found) {
-          this.currentUser$.next(found);
-          localStorage.setItem('currentUser', JSON.stringify(found));
-          this.store.dispatch(new SetCurrentUser(found.id));
-          return true;
-        }
-        return false;
+  public login(
+    email: string,
+    password: string
+  ): Observable<AuthResponse | null> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/api/auth/login`, {
+        email,
+        password,
       })
-    );
+      .pipe(
+        tap((response) => {
+          if (response && response.user) {
+            this.currentUser$.next(response.user as User);
+            this.store.dispatch(new SetCurrentUser(response.user.id));
+          }
+        }),
+        catchError((error) => {
+          console.error('Login error:', error);
+          return of(null);
+        })
+      );
   }
 
-  public signup(user: Partial<User>): Observable<boolean> {
-    return this.usersService.addUser(user).pipe(
-      map((created) => {
-        if (created) {
-          this.currentUser$.next(created as User);
-          localStorage.setItem('currentUser', JSON.stringify(created));
-          this.store.dispatch(new SetCurrentUser((created as User).id));
-          return true;
-        }
-        return false;
-      }),
-      catchError((err) => {
-        // return false on error (e.g., 409 conflict)
-        return of(false);
+  public register(
+    login: string,
+    password: string,
+    firstname: string,
+    lastname: string
+  ): Observable<AuthResponse | null> {
+    return this.http
+      .post<AuthResponse>(`${this.apiUrl}/api/auth/register`, {
+        login,
+        password,
+        firstname,
+        lastname,
       })
-    );
+      .pipe(
+        tap((response) => {
+          if (response && response.user) {
+            this.currentUser$.next(response.user as User);
+            this.store.dispatch(new SetCurrentUser(response.user.id));
+          }
+        }),
+        catchError((error) => {
+          console.error('Registration error:', error);
+          return of(null);
+        })
+      );
   }
 
   public logout(): void {
     this.currentUser$.next(null);
     localStorage.removeItem('currentUser');
+    localStorage.removeItem('accessToken');
     this.store.dispatch(new SetCurrentUser(null));
   }
 
@@ -67,6 +86,12 @@ export class AuthService {
   }
 
   public isLoggedIn(): boolean {
-    return this.currentUser$.value !== null;
+    return (
+      this.currentUser$.value !== null && !!localStorage.getItem('accessToken')
+    );
+  }
+
+  public getToken(): string | null {
+    return localStorage.getItem('accessToken');
   }
 }

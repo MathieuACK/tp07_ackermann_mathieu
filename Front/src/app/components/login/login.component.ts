@@ -2,14 +2,14 @@ import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { UsersService } from '../../services/users/users.service';
-import { AuthService } from '../../services/auth/auth.service';
+import { Store } from '@ngxs/store';
+import { Login, Register } from '../../shared/actions/auth-action';
 
 @Component({
-    selector: 'app-login',
-    imports: [CommonModule, FormsModule],
-    templateUrl: './login.component.html',
-    styleUrls: ['./login.component.css']
+  selector: 'app-login',
+  imports: [CommonModule, FormsModule],
+  templateUrl: './login.component.html',
+  styleUrls: ['./login.component.css'],
 })
 export class LoginComponent {
   firstname = '';
@@ -19,36 +19,46 @@ export class LoginComponent {
   error = '';
   signupMode = false;
 
-  constructor(
-    private auth: AuthService,
-    private router: Router,
-    private usersService: UsersService
-  ) {}
+  constructor(private store: Store, private router: Router) {}
 
   submit() {
+    this.error = '';
+
     if (!this.signupMode) {
-      this.auth.login(this.login, this.password).subscribe((ok) => {
-        if (ok) {
-          this.router.navigate(['/pollution/list']);
-        } else {
-          this.error = 'Identifiants invalides';
-        }
+      // Login with JWT
+      this.store.dispatch(new Login(this.login, this.password)).subscribe({
+        next: () => {
+          // Check if login was successful
+          const token = localStorage.getItem('accessToken');
+          if (token) {
+            this.router.navigate(['/pollution/list']);
+          } else {
+            this.error = 'Identifiants invalides';
+          }
+        },
+        error: (err) => {
+          this.error = 'Erreur de connexion';
+        },
       });
     } else {
-      // attempt signup
-      const user = {
-        login: this.login,
-        password: this.password,
-        firstname: this.firstname,
-        lastname: this.lastname,
-      };
-      this.auth.signup(user).subscribe((created) => {
-        if (created) {
-          this.router.navigate(['/pollution/list']);
-        } else {
-          this.error = 'Impossible de créer le compte (login peut exister)';
-        }
-      });
+      // Register
+      this.store
+        .dispatch(
+          new Register(this.login, this.password, this.firstname, this.lastname)
+        )
+        .subscribe({
+          next: () => {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+              this.router.navigate(['/pollution/list']);
+            } else {
+              this.error = 'Impossible de créer le compte (login peut exister)';
+            }
+          },
+          error: (err) => {
+            this.error = "Erreur lors de l'inscription";
+          },
+        });
     }
   }
 
